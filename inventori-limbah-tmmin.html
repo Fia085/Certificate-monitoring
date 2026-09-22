@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inventori Limbah TMMIN — Prototipe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#EDF0EF; --surface:#FFFFFF; --surface2:#F4F7F6; --ink:#142126; --ink2:#4B5C62; --line:#CFD7D5; --line2:#E3E9E7;
+  --accent:#0E5A6B; --accentInk:#FFFFFF; --accentSoft:#D8EBEF; --band:#0B2A33;
+  --b3:#C2790A; --nb:#0E5A6B; --um:#6B7E8B;
+  --ok:#2C7A4B; --okSoft:#DDEFE4; --warn:#9A5F05; --warnSoft:#F8EBD3; --bad:#B3261E; --badSoft:#F8E1DE;
+  --focus:#0B6BCB;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1618; --surface:#162226; --surface2:#1B2A2F; --ink:#E5EEF0; --ink2:#9CB0B6; --line:#2C3D42; --line2:#22333A;
+    --accent:#5BB8CC; --accentInk:#08222A; --accentSoft:#173640; --band:#071B21;
+    --b3:#E3A445; --nb:#5BB8CC; --um:#93A6B2;
+    --ok:#66C08D; --okSoft:#173A28; --warn:#E3A445; --warnSoft:#3A2D12; --bad:#F0857B; --badSoft:#3F1E1B;
+    --focus:#7DB7FF;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1618; --surface:#162226; --surface2:#1B2A2F; --ink:#E5EEF0; --ink2:#9CB0B6; --line:#2C3D42; --line2:#22333A;
+  --accent:#5BB8CC; --accentInk:#08222A; --accentSoft:#173640; --band:#071B21;
+  --b3:#E3A445; --nb:#5BB8CC; --um:#93A6B2;
+  --ok:#66C08D; --okSoft:#173A28; --warn:#E3A445; --warnSoft:#3A2D12; --bad:#F0857B; --badSoft:#3F1E1B;
+  --focus:#7DB7FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;margin:0;letter-spacing:.01em}
+h2{font-size:24px;line-height:1.15}
+h3{font-size:18px;line-height:1.2;margin-bottom:8px}
+small{font-size:12px;color:var(--ink2)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);grid-template-areas:"top top" "nav main";min-height:100vh;align-content:start}
+.top{grid-area:top;position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--band);color:#F1F7F8;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:10px 20px}
+.brand{display:flex;flex-direction:column;line-height:1.1}
+.brand b{font:700 26px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;letter-spacing:.02em}
+.brand span{font-size:12px;color:#A9C3CA}
+.filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.filters label{display:flex;align-items:center;gap:6px;font-size:12px;color:#A9C3CA}
+.filters select{background:#123842;color:#F1F7F8;border:1px solid #2A5561;border-radius:4px;padding:5px 8px;min-width:104px}
+nav.tabs{grid-area:nav;background:var(--surface);border-right:1px solid var(--line);padding:12px 0;align-self:stretch}
+nav.tabs button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;padding:10px 16px;cursor:pointer;font-weight:500;color:var(--ink2)}
+nav.tabs button:hover{background:var(--surface2);color:var(--ink)}
+nav.tabs button[aria-current="page"]{border-left-color:var(--accent);color:var(--ink);font-weight:600;background:var(--accentSoft)}
+.pill{display:inline-block;min-width:20px;text-align:center;padding:0 6px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bad);color:#fff}
+main{grid-area:main;padding:20px 24px 40px;min-width:0;max-width:1240px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:18px 20px;margin-bottom:18px}
+.panel>h2{margin-bottom:4px}
+.lede{color:var(--ink2);margin:0 0 14px;max-width:72ch}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+.stats{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:4px;background:var(--surface);margin-bottom:18px}
+.stat{flex:1 1 170px;padding:12px 18px;border-right:1px solid var(--line2)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font:700 30px/1.05 'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--ink2)}
+.stat.alert b{color:var(--bad)}
+
+.ladder{display:grid;grid-template-columns:minmax(150px,260px) 1fr 54px;gap:10px 14px;align-items:center}
+.ladder .lab{font-weight:500}
+.ladder .bar{height:12px;background:var(--line2);border-radius:2px;overflow:hidden}
+.ladder .bar i{display:block;height:100%}
+.ladder .pct{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.f-ok{background:var(--ok)}.f-warn{background:var(--warn)}.f-bad{background:var(--bad)}
+.t-ok{color:var(--ok)}.t-warn{color:var(--warn)}.t-bad{color:var(--bad)}
+
+.mrow{display:grid;grid-template-columns:78px 1fr 110px;gap:10px;align-items:center;margin:7px 0}
+.stk{display:flex;height:18px;background:var(--line2);border-radius:2px;overflow:hidden}
+.stk i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--ink2)}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-2px;border-radius:2px;background:var(--c)}
+.c-b3{background:var(--b3)}.c-nb{background:var(--nb)}.c-um{background:var(--um)}
+
+.scroll{overflow-x:auto;max-width:100%}
+.tbl{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.tbl th{background:var(--surface2);text-align:left;font-weight:600;padding:7px 10px;border-bottom:1px solid var(--line);border-top:1px solid var(--line);white-space:nowrap;vertical-align:bottom}
+.tbl td{padding:6px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+.tbl tbody tr:hover td{background:var(--surface2)}
+.tbl .num{text-align:right;white-space:nowrap}
+.tbl th small{display:block;font-weight:400}
+.tbl tr.e-b3 td:first-child{box-shadow:inset 4px 0 0 var(--b3)}
+.tbl tr.e-nb td:first-child{box-shadow:inset 4px 0 0 var(--nb)}
+.tbl tr.e-um td:first-child{box-shadow:inset 4px 0 0 var(--um)}
+.tbl tfoot td{font-weight:600;background:var(--surface2);border-top:1px solid var(--line)}
+.matrix th.grp{text-align:center;border-left:1px solid var(--line)}
+.matrix td,.matrix th{padding:5px 8px}
+.matrix .stick{position:sticky;left:0;background:var(--surface);z-index:1}
+.matrix th.stick{background:var(--surface2)}
+.warncell{color:var(--warn);font-weight:600}
+.dim{color:var(--ink2)}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;font-weight:600;border:1px solid var(--line)}
+.tag.warn{background:var(--warnSoft);color:var(--warn);border-color:transparent}
+.tag.bad{background:var(--badSoft);color:var(--bad);border-color:transparent}
+.tag.ok{background:var(--okSoft);color:var(--ok);border-color:transparent}
+
+.btn{padding:8px 14px;border-radius:4px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentInk)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.btn.sm{padding:3px 9px;font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 16px}
+.formgrid .wide{grid-column:1/-1}
+.field>span.l{display:block;font-weight:600;margin-bottom:4px}
+.field>small{display:block;margin-top:3px;min-height:1em}
+.field input,.field select,.field textarea,.ctl{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);min-height:38px}
+.field textarea{min-height:64px;resize:vertical}
+.inl{display:flex;gap:8px;align-items:center}
+.inl .unit{white-space:nowrap;color:var(--ink2);min-width:3ch}
+.fb{margin-top:16px;display:grid;gap:8px}
+.msg{padding:9px 12px;border-radius:4px;border-left:4px solid var(--line);background:var(--surface2)}
+.msg.err{background:var(--badSoft);border-color:var(--bad)}
+.msg.wrn{background:var(--warnSoft);border-color:var(--warn)}
+.msg.good{background:var(--okSoft);border-color:var(--ok)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.toolbar .ctl{width:auto;min-width:150px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:3px;font-size:12px;background:var(--surface2)}
+.chip button{background:none;border:0;padding:1px 6px;cursor:pointer;color:inherit;font-size:12px}
+.chip.q{border-color:var(--warn);background:var(--warnSoft)}
+.chip.ok{border-color:var(--ok)}
+.tbl input.cell,.tbl select.cell{width:100%;min-width:70px;padding:4px 6px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+.tbl input.cell.n{width:90px;text-align:right}
+.issue{border:1px solid var(--line);border-left-width:5px;border-radius:4px;padding:12px 16px;margin-bottom:12px;background:var(--surface)}
+.issue.kritis{border-left-color:var(--bad)}.issue.sedang{border-left-color:var(--warn)}.issue.info{border-left-color:var(--um)}
+.issue h3{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:4px}
+.issue p{margin:2px 0 6px}
+.issue ul{margin:6px 0 0;padding-left:18px;color:var(--ink2)}
+.empty{padding:26px 8px;color:var(--ink2);text-align:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+.kv dt{color:var(--ink2)}.kv dd{margin:0}
+.note{font-size:12.5px;color:var(--ink2);margin:8px 0 0;max-width:80ch}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:50;max-width:90vw}
+#toast.show{opacity:1}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "nav" "main"}
+  nav.tabs{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 0px)}
+  nav.tabs button{width:auto;white-space:nowrap;border-left:0;border-bottom:3px solid transparent;gap:8px}
+  nav.tabs button[aria-current="page"]{border-bottom-color:var(--accent)}
+  main{padding:16px 14px 40px}
+  .top{position:static}
+  .ladder{grid-template-columns:1fr 54px}
+  .ladder .bar{grid-column:1/-1;grid-row:2}
+  .ladder .lab{grid-column:1}
+  .mrow{grid-template-columns:64px 1fr}
+  .mrow .val{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><b>Inventori limbah</b><span>TMMIN semua plant · prototipe dengan data contoh</span></div>
+    <div class="filters" role="group" aria-label="Filter data">
+      <label>Plant <select id="g-plant"></select></label>
+      <label>Dari <select id="g-from"></select></label>
+      <label>Sampai <select id="g-to"></select></label>
+    </div>
+  </header>
+  <nav class="tabs" id="nav" aria-label="Menu"></nav>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+/* ================= Util ================= */
+const LS_KEY='tmmin-waste-inv-proto-v1';
+const el=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=(n,d=0)=>(n==null||Number.isNaN(n))?'–':Number(n).toLocaleString('id-ID',{minimumFractionDigits:d,maximumFractionDigits:d});
+const qf=n=>(n==null||Number.isNaN(n))?'–':Number(n).toLocaleString('id-ID',{maximumFractionDigits:2});
+const rpf=n=>(n==null||Number.isNaN(n))?'–':'Rp '+nf(n);
+const pad=n=>String(n).padStart(2,'0');
+const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const ymLabel=ym=>{const p=ym.split('-');return BLN[+p[1]-1]+' '+p[0];};
+const dLabel=iso=>{const p=iso.split('-');return +p[2]+' '+BLN[+p[1]-1]+' '+p[0];};
+const lastDay=(y,m)=>new Date(y,m,0).getDate();
+const median=a=>{const s=[...a].sort((x,y)=>x-y);const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+const norm=s=>String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');
+
+const ALIRAN={B3:{nama:'Limbah B3',short:'B3',cls:'b3'},NB:{nama:'Non-B3 dijual (scrap)',short:'Scrap',cls:'nb'},UM:{nama:'Sampah umum',short:'Umum',cls:'um'}};
+const ALIRAN_ORDER=['NB','B3','UM'];
+const KENDARAAN=['Truk','Pickup','Motor roda 3','Troli sampah','Forklift'];
+const KONDISI=['Produksi Normal','OT Day Shift','OT Night Shift','OT All Shift','Night Shift Off','Change Day NS','Libur / stop produksi'];
+const JENIS=['Timbulan','Masuk TPS','Angkut keluar'];
+const METODE=['Timbang','Estimasi','Belum dikonfirmasi'];
+
+/* ================= Data contoh ================= */
+function seed(){
+  const plants=[
+    {id:'SUN1',nama:'Sunter 1',areas:['House Keeping 7K']},
+    {id:'SUN2',nama:'Sunter 2',areas:['Plant Facility Mgmt & Operation']},
+    {id:'KRW12',nama:'Karawang 1 & 2',areas:['Seluruh area']},
+    {id:'KRW3',nama:'Karawang 3',areas:[]}
+  ];
+  const A=(plant,teks,ok)=>({plant,teks,ok});
+  const I=(kode,nama,aliran,satuan,faktor,status,alias,catatan)=>({kode,nama,aliran,satuan,faktor,status,alias:alias||[],catatan:catatan||''});
+  const items=[
+    I('NB-BSI','Besi bekas (ex steel material)','NB','kg',1,'tertulis',[A('SUN1','Scrap besi',false),A('SUN2','Besi Bekas (Ex Steel Material)',true)],'Harga sama di Sunter 1 dan 2 (Rp450/kg), alias Sunter 1 masih dugaan.'),
+    I('NB-BTU','Besi tua','NB','kg',1,'tertulis',[A('SUN2','Besi Tua',true)]),
+    I('NB-RUN','Runner','NB','kg',1,'tertulis',[A('SUN2','Runner',true)]),
+    I('NB-REJ','Material reject','NB','kg',1,'tertulis',[A('SUN2','Material Reject',true)]),
+    I('NB-KBS','Kiriko besi','NB','kg',1,'tertulis',[A('SUN1','Kiriko besi',true),A('SUN2','Kiriko Besi',true)]),
+    I('NB-KAL','Kiriko alum','NB','kg',1,'dugaan',[A('SUN1','Kiriko Alum',true)],'Satuan tidak tertulis di lembar Sunter 1.'),
+    I('NB-KKR','Krk kering','NB','kg',1,'dugaan',[A('SUN1','Krk kering',true)],'Nama lengkap dan satuan perlu dikonfirmasi.'),
+    I('NB-DRM','Drum kosong','NB','pcs',null,'dugaan',[A('SUN1','Drum ksg',true)],'Belum ada data di contoh.'),
+    I('NB-KRT','Kardus / karton bekas','NB','m³',null,'dugaan',[A('SUN1','Karton bks',false),A('SUN2','Kardus/Karton Bekas',true)],'Sunter 2 menulis m³. Angka desimal di Sunter 1 diduga m³ juga.'),
+    I('NB-PLB','Plastik ball','NB','m³',null,'dugaan',[A('SUN1','Plastik ball',true)],'Satuan tidak tertulis di Sunter 1.'),
+    I('NB-BTL','Botol plastik','NB','m³',null,'dugaan',[A('SUN1','Btl plastik',true)],'Satuan tidak tertulis di Sunter 1.'),
+    I('NB-PLS','Plastik bekas','NB','jumbo bag',null,'tertulis',[A('SUN2','Plastik Bekas',true)],'Belum tentu sama dengan Plastik ball Sunter 1.'),
+    I('NB-KRS','Kertas ex material','NB','jumbo bag',null,'tertulis',[A('SUN2','Kertas ex material',true)]),
+    I('NB-KYU','Kayu mixed','NB','m³',null,'tertulis',[A('SUN2','Kayu Mixed',true)]),
+    I('NB-DRN','Daun ranting','NB','plastik',null,'tertulis',[A('SUN2','Daun Ranting',true)]),
+    I('B3-MJN','Majun','B3','kg',1,'dugaan',[A('SUN1','Majun',true)]),
+    I('B3-CLT','Coolant','B3','kg',1,'dugaan',[A('SUN1','Coolant',true)],'Bisa jadi liter, perlu konfirmasi.'),
+    I('B3-LDF','Landfill (B3)','B3','rit',null,'dugaan',[A('SUN1','Landfill',true)],'Terisi 1 per hari angkut, diduga jumlah rit.'),
+    I('B3-OLI','Oli bekas','B3','kg',1,'dugaan',[A('SUN1','Oli Bekas',true)],'Satuan tidak tertulis.'),
+    I('B3-JRG','Jirigen','B3','pcs',null,'dugaan',[A('SUN1','Jirigen',true)],'Belum ada data di contoh.'),
+    I('B3-KLG','Kaleng','B3','pcs',null,'dugaan',[A('SUN1','Kaleng',true)],'Belum ada data di contoh.'),
+    I('B3-CAT','Limbah cat','B3','kg',1,'dugaan',[A('SUN1','Limbah Cat',true)],'Belum ada data di contoh.'),
+    I('B3-MED','Limbah medis','B3','kg',1,'dugaan',[A('SUN1','Medis',true)],'Belum ada data di contoh.'),
+    I('B3-LTL','Lampu TL','B3','pcs',null,'dugaan',[A('SUN1','Lampu TL',true)],'Belum ada data di contoh.'),
+    I('B3-ACU','Aki bekas','B3','pcs',null,'dugaan',[A('SUN1','Accu Bekas',true)],'Belum ada data di contoh.'),
+    I('UM-RSD','Residu (sampah lainnya)','UM','kg',1,'tertulis',[A('KRW12','Jumlah sampah lainnya dan/atau residu diangkut',true)]),
+    I('UM-ORG','Sampah organik terpilah','UM','kg',1,'tertulis',[A('KRW12','Organik',true)]),
+    I('UM-ANO','Sampah anorganik terpilah','UM','kg',1,'tertulis',[A('KRW12','Anorganik',true)])
+  ];
+  const vendors=[
+    {id:'KKJ',nama:'Karya Kita Jaya',tipe:'Pembeli scrap'},
+    {id:'TDIAI',nama:'TDI B3 & Al-Ihsaniah (tercatat gabung)',tipe:'Pengangkut/pengolah B3',gabung:true},
+    {id:'WGI',nama:'WGI/AA',tipe:'Belum dikonfirmasi'},
+    {id:'HERMA',nama:'PT Herma Muda',tipe:'Pengangkut sampah umum'},
+    {id:'INT',nama:'Internal (troli sampah)',tipe:'Internal'},
+    {id:'NA',nama:'Tidak tercatat',tipe:'-'}
+  ];
+  const tujuan=[
+    {id:'JLP',nama:'TPA Jalupang',tipe:'TPA'},
+    {id:'TPS3R',nama:'TPS3R Herma Muda',tipe:'TPS3R'},
+    {id:'BIO',nama:'Biogas',tipe:'Pengolahan organik'},
+    {id:'JUAL',nama:'Dijual ke pembeli scrap',tipe:'Penjualan'},
+    {id:'NA',nama:'Tidak tercatat',tipe:'-'}
+  ];
+  const H=(item,harga,berlaku,catatan)=>({item,harga,berlaku,catatan});
+  const harga=[
+    H('NB-KBS',100,'2025-06-01','Sunter 1'),H('NB-KAL',600,'2025-06-01','Sunter 1'),H('NB-KRT',25000,'2025-06-01','Sunter 1, per satuan di lembar'),
+    H('NB-PLB',25000,'2025-06-01','Sunter 1'),H('NB-BTL',25000,'2025-06-01','Sunter 1'),H('NB-BSI',450,'2025-06-01','Sunter 1 (Scrap besi)'),
+    H('NB-KKR',100,'2025-06-01','Sunter 1'),H('NB-DRM',10000,'2025-06-01','Sunter 1'),
+    H('NB-BSI',450,'2026-01-01','Sunter 2'),H('NB-BTU',300,'2026-01-01','Sunter 2'),H('NB-RUN',350,'2026-01-01','Sunter 2'),
+    H('NB-REJ',600,'2026-01-01','Sunter 2'),H('NB-KBS',100,'2026-01-01','Sunter 2'),H('NB-KRT',25000,'2026-01-01','Sunter 2, per m³'),
+    H('NB-KYU',1250,'2026-01-01','Sunter 2, per m³')
+  ];
+  const tx=[]; let seq=1;
+  const add=o=>tx.push(Object.assign({id:'T'+String(seq++).padStart(4,'0'),area:'',jenisCatat:'Angkut keluar',metode:'Belum dikonfirmasi',kendaraan:'',noDok:'',kondisi:'',catatan:'',granularitas:'harian',tujuan:'NA',vendor:'NA'},o));
+
+  /* Sunter 1, Juni 2025 (lembar rekap harian house keeping 7K) */
+  const kond={1:'Change Day NS',2:'Produksi Normal',3:'Produksi Normal',4:'Produksi Normal',5:'Night Shift Off',8:'OT Night Shift',9:'Produksi Normal',10:'Produksi Normal',11:'Produksi Normal',12:'Produksi Normal',13:'Produksi Normal',14:'OT Day Shift',15:'OT Night Shift',16:'Produksi Normal',17:'Produksi Normal',18:'Produksi Normal',19:'Produksi Normal',20:'Produksi Normal',21:'OT Day Shift',22:'OT All Shift',23:'Produksi Normal',24:'Produksi Normal',25:'Produksi Normal',26:'Produksi Normal',30:'Produksi Normal'};
+  const s1={
+    'NB-KBS':['KKJ',[[2,4245],[3,3234],[4,3743],[5,3564],[9,4098],[10,4007],[11,3835],[12,4167],[13,5042],[14,3666],[16,3693],[17,4163],[18,4057],[19,3625],[20,4525],[21,4019],[23,2668],[24,3267],[25,2990],[26,4157],[30,2770]]],
+    'NB-KAL':['KKJ',[[2,287],[3,319],[4,282],[5,325],[9,181],[10,364],[11,434],[12,386],[13,394],[14,378],[16,317],[17,334],[18,289],[19,355],[20,321],[21,305],[23,374],[24,353],[25,342],[26,376],[30,323]]],
+    'NB-KRT':['KKJ',[[4,16.3],[11,16.3],[16,15.6],[18,13.6],[25,15.6],[30,14.2]]],
+    'NB-PLB':['KKJ',[[2,9.5],[26,10.8]]],
+    'NB-BTL':['KKJ',[[5,10.2],[26,11.5]]],
+    'NB-BSI':['KKJ',[[17,3910]]],
+    'NB-KKR':['KKJ',[[5,5700],[13,5921],[19,6069],[25,6252]]],
+    'B3-MJN':['TDIAI',[[5,2087],[12,1231],[18,1923],[25,1859]]],
+    'B3-CLT':['TDIAI',[[4,7000],[10,19000],[17,7000],[20,9000]]],
+    'B3-LDF':['TDIAI',[[3,1],[10,1],[13,1],[18,1],[23,1]]],
+    'B3-OLI':['WGI',[[13,17]]]
+  };
+  Object.keys(s1).forEach(k=>{const v=s1[k][0];s1[k][1].forEach(r=>add({tanggal:'2025-06-'+pad(r[0]),plant:'SUN1',area:'House Keeping 7K',item:k,jumlah:r[1],vendor:v,kondisi:kond[r[0]]||''}));});
+
+  /* Sunter 2, Jan-Mei 2026 (rekap bulanan) */
+  const eom=['2026-01-31','2026-02-28','2026-03-31','2026-04-30','2026-05-31'];
+  const s2={'NB-BSI':[453130,403700,289560,468560,388690],'NB-BTU':[7590,5290,13810,2310,4240],'NB-RUN':[94875,97630,83510,99240,87210],'NB-REJ':[1420,1850,740,920,580],'NB-KBS':[1180,2770,null,3140,1690],'NB-KRT':[8,8,17,12,7],'NB-KYU':[8,9,4,6,3],'NB-PLS':[12,12,19,6,5],'NB-KRS':[4,2,5,8,3],'NB-DRN':[5,5,5,5,5]};
+  Object.keys(s2).forEach(k=>s2[k].forEach((q,i)=>{if(q!=null)add({tanggal:eom[i],plant:'SUN2',area:'Plant Facility Mgmt & Operation',item:k,jumlah:q,granularitas:'bulanan',catatan:'Rekap bulanan, belum per pengangkutan'});}));
+
+  /* Karawang 1 & 2, Mei-Juni 2026 (log pengangkutan sampah) : [tgl, residu, organik truk, anorganik truk, organik troli] */
+  const krw={'2026-05':[[4,3501,245,14283,105],[5,0,309,17982,132],[6,0,219,12742,94],[7,2700,332,19319,142],[8,0,224,13041,96],[11,0,251,14630,107],[12,3000,319,18575,137],[13,0,197,11479,85],[15,2801,277,16146,119],[18,0,260,15129,111],[19,3100,182,10584,78],[20,0,293,17030,125],[21,2600,313,18214,134],[22,0,174,10154,75],[25,0,303,17661,130],[26,3273,265,15448,114],[28,0,208,12105,89],[29,2900,323,18798,139],[30,0,218,12402,94]],
+    '2026-06':[[2,3802,223,8230,95],[3,0,321,11852,137],[4,2600,193,7142,83],[5,0,302,11180,130],[8,0,213,7868,91],[9,3300,270,9990,116],[10,0,330,12216,142],[11,2702,174,6418,74],[12,0,295,10896,126],[15,0,235,8670,101],[17,0,202,7480,87],[18,3502,313,11568,134],[19,0,324,11982,139],[20,0,228,8436,98],[22,0,180,6652,77],[23,3000,307,11336,131],[24,0,246,9110,106],[25,2900,208,7686,89],[26,0,337,12448,144],[29,0,275,10170,118],[30,3102,306,11693,131]]};
+  Object.keys(krw).forEach(ym=>krw[ym].forEach(r=>{
+    const d=ym+'-'+pad(r[0]);
+    if(r[1]) add({tanggal:d,plant:'KRW12',area:'Seluruh area',item:'UM-RSD',jumlah:r[1],kendaraan:'Truk',vendor:'HERMA',tujuan:'JLP'});
+    add({tanggal:d,plant:'KRW12',area:'Seluruh area',item:'UM-ORG',jumlah:r[2],kendaraan:'Truk',vendor:'HERMA',tujuan:'TPS3R'});
+    add({tanggal:d,plant:'KRW12',area:'Seluruh area',item:'UM-ANO',jumlah:r[3],kendaraan:'Truk',vendor:'HERMA',tujuan:'TPS3R'});
+    add({tanggal:d,plant:'KRW12',area:'Seluruh area',item:'UM-ORG',jumlah:r[4],kendaraan:'Troli sampah',vendor:'INT',tujuan:'BIO'});
+  }));
+  return {v:1,seq,plants,items,vendors,tujuan,harga,tx};
+}
+
+/* ================= State ================= */
+let DB=null,IM={},PM={},VM={},TM={};
+let F={plant:'ALL',from:'',to:''};
+const S={tab:'dashboard',form:null,editId:null,txQ:{q:'',aliran:'',issue:'',limit:100},rk:{format:'s1',plant:'SUN1',period:'2025-06',mode:'qty'},imp:null};
+function reindex(){
+  IM=Object.fromEntries(DB.items.map(i=>[i.kode,i]));
+  PM=Object.fromEntries(DB.plants.map(p=>[p.id,p]));
+  VM=Object.fromEntries(DB.vendors.map(v=>[v.id,v]));
+  TM=Object.fromEntries(DB.tujuan.map(v=>[v.id,v]));
+}
+function load(){
+  try{const raw=localStorage.getItem(LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&Array.isArray(d.tx)&&Array.isArray(d.items))return d;}}catch(e){}
+  return seed();
+}
+let saveTimer=null;
+function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(DB));}catch(e){}},250);}
+function nextId(){const id='T'+String(DB.seq++).padStart(4,'0');return id;}
+function toast(msg){const t=el('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3400);}
+
+/* ================= Query helpers ================= */
+function getTx(o){
+  o=o||{};
+  const p='plant' in o?o.plant:F.plant, from='from' in o?o.from:F.from, to='to' in o?o.to:F.to;
+  return DB.tx.filter(t=>(p==='ALL'||t.plant===p)&&(!from||t.tanggal.slice(0,7)>=from)&&(!to||t.tanggal.slice(0,7)<=to));
+}
+function allMonths(){return [...new Set(DB.tx.map(t=>t.tanggal.slice(0,7)))].sort();}
+function toKg(t){const it=IM[t.item];if(!it||it.faktor==null||it.faktor===''||isNaN(it.faktor))return null;return t.jumlah*it.faktor;}
+function priceFor(kode,date){let best=null;DB.harga.forEach(h=>{if(h.item===kode&&h.berlaku<=date&&(!best||h.berlaku>best.berlaku))best=h;});return best?best.harga:null;}
+function rpOf(t){const it=IM[t.item];if(!it||it.aliran!=='NB'||t.jenisCatat!=='Angkut keluar')return null;const p=priceFor(t.item,t.tanggal);return p==null?null:t.jumlah*p;}
+function itemLabel(kode,plant){
+  const it=IM[kode];if(!it)return kode;
+  if(plant&&plant!=='ALL'){const a=it.alias.find(x=>x.plant===plant);if(a)return a.teks;}
+  return it.nama;
+}
+const aliranRank=k=>ALIRAN_ORDER.indexOf(IM[k]?IM[k].aliran:'UM');
+function sortItems(codes){return [...codes].sort((a,b)=>aliranRank(a)-aliranRank(b)||(IM[a]?IM[a].nama:a).localeCompare(IM[b]?IM[b].nama:b));}
+
+/* ================= Validasi ================= */
+function runChecks(txs){
+  const issues=[];
+  const push=(id,sev,judul,detail,rows,saran,notes)=>{if((rows&&rows.length)||(notes&&notes.length))issues.push({id,sev,judul,detail,saran,rows:rows||[],notes:notes||[]});};
+  const ids=a=>a.map(t=>t.id);
+  const daily=txs.filter(t=>t.granularitas!=='bulanan');
+  const keluar=daily.filter(t=>t.jenisCatat==='Angkut keluar');
+  push('b3-nodok','kritis','Limbah B3 tanpa nomor manifest','Tanpa manifest, angkutan B3 tidak bisa dicocokkan dengan dokumen vendor dan neraca B3.',ids(keluar.filter(t=>IM[t.item]&&IM[t.item].aliran==='B3'&&!t.noDok)),'Jadikan nomor manifest kolom wajib untuk semua limbah B3.');
+  const dup={};daily.forEach(t=>{const k=[t.plant,t.tanggal,t.item,t.vendor,t.kendaraan,t.tujuan,t.jenisCatat].join('|');(dup[k]=dup[k]||[]).push(t.id);});
+  push('dobel','kritis','Kemungkinan input ganda','Ada catatan dengan plant, tanggal, item, pengangkut, kendaraan, dan tujuan yang sama. Bisa dua rit yang sah, bisa juga terinput dua kali.',Object.values(dup).filter(a=>a.length>1).flat(),'Beri nomor tiket berbeda untuk tiap rit supaya bisa dibedakan.');
+  push('nodok','sedang','Angkutan tanpa nomor tiket atau nota','Nomor tiket timbang atau nota menjadi kunci untuk mencocokkan catatan dengan tagihan vendor.',ids(keluar.filter(t=>IM[t.item]&&IM[t.item].aliran!=='B3'&&!t.noDok)),'Tambahkan kolom nomor tiket atau nota di form input.');
+  push('metode','sedang','Metode ukur belum dikonfirmasi','Belum jelas angka ini hasil timbang atau perkiraan. Angka bulat yang berulang biasanya menandakan estimasi.',ids(txs.filter(t=>t.metode==='Belum dikonfirmasi')),'Tandai tiap catatan sebagai Timbang atau Estimasi.');
+  push('tujuan','sedang','Tujuan akhir tidak tercatat','Tanpa tujuan akhir, aliran limbah tidak bisa ditelusuri sampai ke TPA, pengolah, atau pembeli.',ids(keluar.filter(t=>t.tujuan==='NA')),'Pilih tujuan akhir di setiap catatan angkut.');
+  push('vendor','sedang','Pengangkut tidak tercatat','Pengangkut kosong membuat rekonsiliasi dengan vendor tidak mungkin.',ids(keluar.filter(t=>t.vendor==='NA')),'Pilih pengangkut di setiap catatan angkut.');
+  push('vendor-gabung','sedang','Pengangkut B3 tercatat gabung','Dua vendor dicatat dalam satu kolom, sehingga tidak terlihat siapa yang mengangkut tiap rit.',ids(keluar.filter(t=>VM[t.vendor]&&VM[t.vendor].gabung)),'Catat satu pengangkut per transaksi.');
+  push('satuan','sedang','Satuan belum bisa dikonversi ke kg','Jumlah ini belum ikut di total kg untuk neraca dan PROPER.',ids(txs.filter(t=>IM[t.item]&&IM[t.item].faktor==null)),'Isi faktor konversi di Master data (mis. kg per m³ atau per jumbo bag), tandai sebagai estimasi bila tidak ditimbang.');
+  const med={};daily.forEach(t=>{const k=t.plant+'|'+t.item;(med[k]=med[k]||[]).push(t.jumlah);});
+  push('outlier','sedang','Jumlah jauh di atas kebiasaan','Lebih dari 3 kali median untuk item dan plant yang sama.',ids(daily.filter(t=>{const a=med[t.plant+'|'+t.item];return a.length>=6&&t.jumlah>3*median(a)&&median(a)>0;})),'Cek ulang timbangan atau nota untuk tanggal ini.');
+  push('bulanan','info','Data bulanan, bukan per pengangkutan','Data agregat tidak bisa direkonsiliasi dengan manifest atau nota per angkut.',ids(txs.filter(t=>t.granularitas==='bulanan')),'Mulai catat per pengangkutan; rekap bulanan dihasilkan otomatis.');
+  const ser={};txs.filter(t=>t.granularitas==='bulanan').forEach(t=>{const k=t.plant+'|'+t.item;(ser[k]=ser[k]||new Set()).add(t.tanggal.slice(0,7));});
+  const gapNotes=[];
+  Object.keys(ser).forEach(k=>{const ms=[...ser[k]].sort();if(ms.length<2)return;let [y,m]=ms[0].split('-').map(Number);const end=ms[ms.length-1];const miss=[];
+    for(;;){const ym=y+'-'+pad(m);if(ym>end)break;if(!ser[k].has(ym))miss.push(ymLabel(ym));m++;if(m>12){m=1;y++;}}
+    if(miss.length){const p=k.split('|');gapNotes.push(itemLabel(p[1])+' · '+(PM[p[0]]?PM[p[0]].nama:p[0])+': '+miss.join(', ')+' tidak ada catatan (kosong atau nol?)');}});
+  push('gap','info','Bulan kosong di antara bulan terisi','Kosong dan nol tidak dibedakan, jadi tidak jelas apakah tidak ada pengeluaran atau belum diinput.',[],'Isi 0 secara eksplisit bila memang tidak ada limbah.',gapNotes);
+  const an=[];DB.items.forEach(it=>it.alias.forEach(a=>{if(!a.ok)an.push(it.nama+' ← “'+a.teks+'” ('+(PM[a.plant]?PM[a.plant].nama:a.plant)+')');}));
+  push('alias','info','Alias nama item belum dikonfirmasi','Nama di form plant dianggap sama dengan nama standar, tetapi belum dipastikan.',[],'Konfirmasi ke pemilik form plant, lalu tandai alias sebagai terkonfirmasi di Master data.',an);
+  const rank={kritis:0,sedang:1,info:2};
+  return issues.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+}
+function health(txs){
+  const n=txs.length;const p=f=>n?Math.round(100*txs.filter(f).length/n):null;
+  return [
+    {label:'Nomor manifest atau tiket terisi',v:p(t=>!!t.noDok),tip:'Kunci rekonsiliasi dengan vendor.'},
+    {label:'Metode ukur terkonfirmasi',v:p(t=>t.metode!=='Belum dikonfirmasi'),tip:'Timbang atau estimasi, bukan tebakan.'},
+    {label:'Tujuan akhir tercatat',v:p(t=>t.tujuan!=='NA'),tip:'Ke mana limbah berakhir.'},
+    {label:'Pengangkut tercatat',v:p(t=>t.vendor!=='NA'),tip:'Siapa yang mengangkut.'},
+    {label:'Bisa dijumlah dalam kg',v:p(t=>IM[t.item]&&IM[t.item].faktor!=null),tip:'Satuan punya faktor konversi.'}
+  ];
+}
+/* ================= Render: kerangka ================= */
+const TABS=[['dashboard','Ringkasan'],['input','Input'],['transaksi','Transaksi'],['rekap','Rekap per format'],['master','Master data'],['validasi','Validasi'],['data','Impor & ekspor']];
+function renderTop(){
+  const ms=allMonths();
+  el('g-plant').innerHTML='<option value="ALL">Semua plant</option>'+DB.plants.map(p=>`<option value="${esc(p.id)}"${F.plant===p.id?' selected':''}>${esc(p.nama)}</option>`).join('');
+  const mo=(sel)=>'<option value="">'+(sel==='from'?'Awal data':'Akhir data')+'</option>'+ms.map(m=>`<option value="${m}"${F[sel]===m?' selected':''}>${ymLabel(m)}</option>`).join('');
+  el('g-from').innerHTML=mo('from');el('g-to').innerHTML=mo('to');
+}
+function renderNav(){
+  const crit=runChecks(getTx()).filter(i=>i.sev==='kritis').length;
+  el('nav').innerHTML=TABS.map(t=>`<button data-act="tab" data-tab="${t[0]}"${S.tab===t[0]?' aria-current="page"':''}>${t[1]}${t[0]==='validasi'&&crit?`<span class="pill" title="${crit} temuan kritis">${crit}</span>`:''}</button>`).join('');
+}
+function render(){
+  renderTop();renderNav();
+  const v=el('view');
+  const fn={dashboard:renderDashboard,input:renderInput,transaksi:renderTransaksi,rekap:renderRekap,master:renderMaster,validasi:renderValidasi,data:renderData}[S.tab];
+  v.innerHTML=fn();
+  if(S.tab==='input')updateFormUI();
+}
+const empty=msg=>`<div class="empty">${msg}</div>`;
+
+/* ================= Ringkasan ================= */
+function renderDashboard(){
+  const txs=getTx();
+  if(!txs.length)return `<section class="panel"><h2>Ringkasan</h2>${empty('Belum ada data pada filter ini. Ubah plant atau periode di bagian atas, atau catat transaksi di menu Input.')}</section>`;
+  const out=txs.filter(t=>t.jenisCatat==='Angkut keluar');
+  let kg=0,unc=0;out.forEach(t=>{const k=toKg(t);if(k==null)unc++;else kg+=k;});
+  const H=health(txs);
+  const plantsFilled=new Set(txs.map(t=>t.plant)).size;
+  const months=[...new Set(out.map(t=>t.tanggal.slice(0,7)))].sort();
+  const mk={};out.forEach(t=>{const k=toKg(t);if(k==null)return;const m=t.tanggal.slice(0,7);const a=IM[t.item].aliran;(mk[m]=mk[m]||{B3:0,NB:0,UM:0})[a]+=k;});
+  const maxM=Math.max(1,...months.map(m=>mk[m]?mk[m].B3+mk[m].NB+mk[m].UM:0));
+  let h=`<div class="stats">
+    <div class="stat"><b>${nf(kg/1000,1)} ton</b><span>tercatat keluar (yang bisa dikonversi ke kg)</span></div>
+    <div class="stat"><b>${nf(txs.length)}</b><span>catatan transaksi</span></div>
+    <div class="stat"><b>${plantsFilled} dari ${DB.plants.length}</b><span>plant sudah punya data</span></div>
+    <div class="stat${unc?' alert':''}"><b>${nf(unc)}</b><span>catatan belum bisa dijumlah ke kg</span></div>
+  </div>`;
+  h+=`<section class="panel"><h2>Kelengkapan catatan</h2><p class="lede">Seberapa lengkap catatan yang masuk. Persentase rendah berarti rekonsiliasi dan laporan masih harus dibersihkan manual.</p><div class="ladder">`+
+    H.map(x=>{const c=x.v==null?'':x.v>=90?'ok':x.v>=60?'warn':'bad';return `<div class="lab" title="${esc(x.tip)}">${esc(x.label)}</div><div class="bar"><i class="f-${c}" style="width:${x.v||0}%"></i></div><div class="pct t-${c}">${x.v==null?'–':x.v+'%'}</div>`;}).join('')+`</div></section>`;
+  h+=`<section class="panel"><h2>Tonase per bulan menurut aliran</h2><p class="lede">Hanya catatan angkut keluar yang sudah bisa dikonversi ke kg.</p>`;
+  if(!months.length)h+=empty('Belum ada catatan angkut keluar.');
+  else{
+    h+=months.map(m=>{const r=mk[m]||{B3:0,NB:0,UM:0};const tot=r.B3+r.NB+r.UM;
+      return `<div class="mrow"><div>${ymLabel(m)}</div><div class="stk" title="B3 ${nf(r.B3)} kg · Scrap ${nf(r.NB)} kg · Umum ${nf(r.UM)} kg">${ALIRAN_ORDER.map(a=>`<i class="c-${ALIRAN[a].cls}" style="width:${(r[a]/maxM*100).toFixed(2)}%"></i>`).join('')}</div><div class="val num">${nf(tot/1000,1)} ton</div></div>`;}).join('');
+    h+=`<div class="legend">${ALIRAN_ORDER.map(a=>`<span style="--c:var(--${ALIRAN[a].cls})">${ALIRAN[a].nama}</span>`).join('')}</div>`;
+  }
+  h+=`</section><div class="grid2">`;
+  /* per plant x aliran */
+  const pa={};out.forEach(t=>{const k=toKg(t);if(k==null)return;pa[t.plant]=pa[t.plant]||{B3:0,NB:0,UM:0};pa[t.plant][IM[t.item].aliran]+=k;});
+  h+=`<section class="panel"><h3>Per plant dan aliran (kg)</h3><div class="scroll"><table class="tbl"><thead><tr><th>Plant</th>${ALIRAN_ORDER.map(a=>`<th class="num">${ALIRAN[a].short}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>`+
+    Object.keys(pa).map(p=>{const r=pa[p];return `<tr><td>${esc(PM[p]?PM[p].nama:p)}</td>${ALIRAN_ORDER.map(a=>`<td class="num">${r[a]?nf(r[a]):'–'}</td>`).join('')}<td class="num"><b>${nf(r.B3+r.NB+r.UM)}</b></td></tr>`;}).join('')+`</tbody></table></div></section>`;
+  const td={};out.forEach(t=>{const k=toKg(t);if(k==null)return;td[t.tujuan]=(td[t.tujuan]||0)+k;});
+  h+=`<section class="panel"><h3>Tujuan akhir (kg)</h3><div class="scroll"><table class="tbl"><thead><tr><th>Tujuan</th><th>Tipe</th><th class="num">kg</th></tr></thead><tbody>`+
+    Object.keys(td).sort((a,b)=>td[b]-td[a]).map(k=>`<tr><td>${esc(TM[k]?TM[k].nama:k)}</td><td>${esc(TM[k]?TM[k].tipe:'')}</td><td class="num">${nf(td[k])}</td></tr>`).join('')+`</tbody></table></div></section></div>`;
+  /* neraca B3 */
+  const b3={};txs.filter(t=>IM[t.item]&&IM[t.item].aliran==='B3').forEach(t=>{const r=b3[t.item]=b3[t.item]||{Timbulan:0,'Masuk TPS':0,'Angkut keluar':0};r[t.jenisCatat]+=t.jumlah;});
+  const b3k=Object.keys(b3);
+  h+=`<section class="panel"><h2>Neraca limbah B3</h2>`;
+  if(!b3k.length)h+=empty('Belum ada catatan limbah B3 pada filter ini.');
+  else{
+    const anyIn=b3k.some(k=>b3[k].Timbulan||b3[k]['Masuk TPS']);
+    h+=`<p class="lede">${anyIn?'Saldo TPS = masuk TPS dikurangi angkut keluar, dalam satuan asli tiap item.':'Baru ada catatan angkut keluar. Tanpa catatan timbulan dan masuk TPS, saldo dan batas simpan B3 belum bisa dipantau.'}</p><div class="scroll"><table class="tbl"><thead><tr><th>Item</th><th>Satuan</th><th class="num">Timbulan</th><th class="num">Masuk TPS</th><th class="num">Angkut keluar</th><th class="num">Saldo TPS</th></tr></thead><tbody>`+
+      sortItems(b3k).map(k=>{const r=b3[k];const has=r['Masuk TPS']>0;return `<tr class="e-b3"><td>${esc(IM[k].nama)}</td><td>${esc(IM[k].satuan)}</td><td class="num">${r.Timbulan?qf(r.Timbulan):'–'}</td><td class="num">${r['Masuk TPS']?qf(r['Masuk TPS']):'–'}</td><td class="num">${qf(r['Angkut keluar'])}</td><td class="num">${has?qf(r['Masuk TPS']-r['Angkut keluar']):'–'}</td></tr>`;}).join('')+`</tbody></table></div>`;
+  }
+  return h+`</section>`;
+}
+
+/* ================= Input ================= */
+function blankForm(prev){
+  const d=new Date();const iso=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  return Object.assign({tanggal:iso,plant:DB.plants[0].id,area:'',jenisCatat:'Angkut keluar',item:'',jumlah:'',metode:'Timbang',kendaraan:'',vendor:'NA',tujuan:'NA',noDok:'',kondisi:'',catatan:''},prev||{});
+}
+const optList=(arr,val,blank)=>(blank!=null?`<option value="">${esc(blank)}</option>`:'')+arr.map(o=>{const v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;return `<option value="${esc(v)}"${String(val)===String(v)?' selected':''}>${esc(l)}</option>`;}).join('');
+function areaOptions(f){const p=PM[f.plant];const a=p?p.areas:[];return optList(a,f.area,'Tidak dipisah per area');}
+function itemOptions(sel){
+  return '<option value="">Pilih item…</option>'+ALIRAN_ORDER.map(a=>{
+    const its=DB.items.filter(i=>i.aliran===a).sort((x,y)=>x.nama.localeCompare(y.nama));
+    return its.length?`<optgroup label="${esc(ALIRAN[a].nama)}">${its.map(i=>`<option value="${esc(i.kode)}"${sel===i.kode?' selected':''}>${esc(i.nama)} (${esc(i.satuan)})</option>`).join('')}</optgroup>`:'';
+  }).join('');
+}
+function requiresManifest(f){const it=IM[f.item];return !!(it&&it.aliran==='B3'&&f.jenisCatat==='Angkut keluar');}
+function aliasHint(plant,kode){
+  const it=IM[kode];if(!it)return '';
+  const a=it.alias.find(x=>x.plant===plant);
+  return a?`Di form ${PM[plant]?PM[plant].nama:plant} biasa ditulis “${a.teks}”`+(a.ok?'':' (belum dikonfirmasi)'):'Belum ada nama alias untuk plant ini.';
+}
+function formCheck(f){
+  const errors=[],warns=[];const it=IM[f.item];
+  const q=f.jumlah===''?NaN:parseNum(f.jumlah);
+  if(!f.tanggal)errors.push('Isi tanggal.');
+  if(!f.plant)errors.push('Pilih plant.');
+  if(!f.item)errors.push('Pilih item limbah.');
+  if(Number.isNaN(q)||q<0)errors.push('Isi jumlah. Tulis 0 bila memang tidak ada limbah, jangan dikosongkan.');
+  if(requiresManifest(f)&&!f.noDok.trim())errors.push('Limbah B3 wajib punya nomor manifest.');
+  let kg=null,rp=null;
+  if(it&&!Number.isNaN(q)){
+    if(it.faktor==null)warns.push(`Satuan ${it.satuan} belum punya faktor konversi ke kg, jadi jumlah ini belum masuk total kg. Isi di Master data.`);else kg=q*it.faktor;
+    const pr=it.aliran==='NB'&&f.jenisCatat==='Angkut keluar'?priceFor(f.item,f.tanggal||'9999'):null;if(pr!=null)rp=q*pr;
+  }
+  if(f.metode==='Belum dikonfirmasi')warns.push('Metode ukur belum dikonfirmasi. Pilih Timbang atau Estimasi.');
+  if(f.jenisCatat==='Angkut keluar'){
+    if(f.tujuan==='NA')warns.push('Tujuan akhir belum dipilih.');
+    if(f.vendor==='NA')warns.push('Pengangkut belum dipilih.');
+    if(!f.kendaraan.trim())warns.push('Jenis kendaraan belum diisi.');
+  }
+  if(it&&it.aliran!=='B3'&&!f.noDok.trim())warns.push('Nomor tiket atau nota belum diisi. Disarankan untuk rekonsiliasi.');
+  const key=t=>[t.plant,t.tanggal,t.item,t.vendor,t.kendaraan,t.tujuan,t.jenisCatat].join('|');
+  const me={plant:f.plant,tanggal:f.tanggal,item:f.item,vendor:f.vendor,kendaraan:f.kendaraan,tujuan:f.tujuan,jenisCatat:f.jenisCatat};
+  if(f.item&&f.tanggal&&DB.tx.some(t=>t.id!==S.editId&&t.granularitas!=='bulanan'&&key(t)===key(me)))warns.push('Sudah ada catatan dengan tanggal, item, pengangkut, kendaraan, dan tujuan yang sama. Pastikan ini bukan input ganda.');
+  return {errors,warns,kg,rp,q};
+}
+function fld(label,inner,hintId,hint){return `<label class="field"><span class="l">${label}</span>${inner}<small${hintId?` id="${hintId}"`:''}>${hint||''}</small></label>`;}
+function renderInput(){
+  const f=S.form||(S.form=blankForm());
+  const it=IM[f.item];
+  return `<section class="panel"><h2>${S.editId?'Ubah transaksi '+esc(S.editId):'Catat transaksi'}</h2>
+  <p class="lede">Satu baris untuk satu pengangkutan, timbulan, atau masuk TPS. Semua plant memakai form yang sama; nama item dipilih dari kamus data, bukan diketik bebas.</p>
+  <div class="formgrid">
+    ${fld('Tanggal',`<input type="date" data-f="tanggal" value="${esc(f.tanggal)}">`)}
+    ${fld('Plant',`<select data-f="plant">${optList(DB.plants.map(p=>[p.id,p.nama]),f.plant)}</select>`)}
+    ${fld('Area / TPS',`<select data-f="area" id="f-area">${areaOptions(f)}</select>`)}
+    ${fld('Jenis catatan',`<select data-f="jenisCatat">${optList(JENIS,f.jenisCatat)}</select>`,'', 'Timbulan → masuk TPS → angkut keluar')}
+    <div class="wide">${fld('Item limbah',`<select data-f="item">${itemOptions(f.item)}</select>`,'f-alias','')}</div>
+    ${fld('Jumlah',`<div class="inl"><input type="text" inputmode="decimal" data-f="jumlah" value="${esc(f.jumlah)}" placeholder="0"><span class="unit" id="f-unit">${it?esc(it.satuan):''}</span></div>`,'f-kg','')}
+    ${fld('Metode ukur',`<select data-f="metode">${optList(METODE,f.metode)}</select>`)}
+    ${fld('Kendaraan',`<input type="text" list="dl-kend" data-f="kendaraan" value="${esc(f.kendaraan)}" placeholder="Truk, pickup, troli…"><datalist id="dl-kend">${KENDARAAN.map(k=>`<option value="${esc(k)}">`).join('')}</datalist>`)}
+    ${fld('Pengangkut',`<select data-f="vendor">${optList(DB.vendors.map(v=>[v.id,v.nama]),f.vendor)}</select>`)}
+    ${fld('Tujuan akhir',`<select data-f="tujuan">${optList(DB.tujuan.map(v=>[v.id,v.nama+' ('+v.tipe+')']),f.tujuan)}</select>`)}
+    ${fld('Nomor manifest atau tiket timbang',`<input type="text" data-f="noDok" value="${esc(f.noDok)}" placeholder="mis. MNF-2026-0142">`,'f-noDok-req','')}
+    ${fld('Kondisi produksi',`<select data-f="kondisi">${optList(KONDISI,f.kondisi,'Tidak dicatat')}</select>`,'','Membantu menjelaskan naik turunnya timbulan')}
+    <div class="wide">${fld('Catatan',`<textarea data-f="catatan">${esc(f.catatan)}</textarea>`)}</div>
+  </div>
+  <div id="fb" class="fb" aria-live="polite"></div>
+  <div class="actions"><button class="btn primary" data-act="save">${S.editId?'Simpan perubahan':'Simpan transaksi'}</button>${S.editId?'<button class="btn" data-act="cancel-edit">Batal ubah</button>':'<button class="btn" data-act="reset-form">Kosongkan form</button>'}</div></section>`;
+}
+function updateFormUI(){
+  const f=S.form;if(!f||!el('fb'))return;
+  const it=IM[f.item];const c=formCheck(f);
+  el('f-unit').textContent=it?it.satuan:'';
+  el('f-alias').textContent=it?aliasHint(f.plant,f.item):'';
+  el('f-noDok-req').textContent=requiresManifest(f)?'Wajib untuk limbah B3.':(it?'Disarankan untuk rekonsiliasi.':'');
+  el('f-kg').textContent=(!Number.isNaN(c.q)&&f.jumlah!==''?'Terbaca '+qf(c.q)+(it?' '+it.satuan:''):'')+(c.kg!=null?' · ≈ '+nf(c.kg,1)+' kg':'')+(c.rp!=null?' · nilai ≈ '+rpf(c.rp):'');
+  el('fb').innerHTML=c.errors.map(m=>`<div class="msg err">${esc(m)}</div>`).join('')+c.warns.map(m=>`<div class="msg wrn">${esc(m)}</div>`).join('')+(!c.errors.length&&!c.warns.length?'<div class="msg good">Catatan lengkap.</div>':'');
+}
+function saveForm(){
+  const f=S.form;const c=formCheck(f);
+  if(c.errors.length){updateFormUI();toast(c.errors[0]);return;}
+  const rec={tanggal:f.tanggal,plant:f.plant,area:f.area,item:f.item,jumlah:c.q,jenisCatat:f.jenisCatat,metode:f.metode,kendaraan:f.kendaraan.trim(),vendor:f.vendor,tujuan:f.tujuan,noDok:f.noDok.trim(),kondisi:f.kondisi,catatan:f.catatan.trim(),granularitas:'harian'};
+  if(S.editId){const i=DB.tx.findIndex(t=>t.id===S.editId);if(i>=0){rec.id=S.editId;rec.granularitas=DB.tx[i].granularitas;DB.tx[i]=rec;}toast('Perubahan disimpan');S.editId=null;S.form=blankForm({plant:f.plant});}
+  else{rec.id=nextId();DB.tx.push(rec);toast('Transaksi '+rec.id+' disimpan');S.form=blankForm({tanggal:f.tanggal,plant:f.plant,area:f.area,jenisCatat:f.jenisCatat,metode:f.metode,kendaraan:f.kendaraan,vendor:f.vendor,tujuan:f.tujuan,kondisi:f.kondisi});}
+  persist();render();
+}
+
+/* ================= Transaksi ================= */
+function txRows(){
+  const base=getTx();let rows=base;const Q=S.txQ;const q=Q.q.trim().toLowerCase();
+  if(Q.aliran)rows=rows.filter(t=>IM[t.item]&&IM[t.item].aliran===Q.aliran);
+  if(Q.issue){const iss=runChecks(base).find(i=>i.id===Q.issue);const set=new Set(iss?iss.rows:[]);rows=rows.filter(t=>set.has(t.id));}
+  if(q)rows=rows.filter(t=>{const it=IM[t.item]||{};return [t.id,t.tanggal,PM[t.plant]&&PM[t.plant].nama,it.nama,it.kode,(it.alias||[]).map(a=>a.teks).join(' '),VM[t.vendor]&&VM[t.vendor].nama,TM[t.tujuan]&&TM[t.tujuan].nama,t.noDok,t.kendaraan,t.catatan].join(' ').toLowerCase().includes(q);});
+  return rows.sort((a,b)=>b.tanggal.localeCompare(a.tanggal)||a.id.localeCompare(b.id));
+}
+function txTable(){
+  const rows=txRows();const shown=rows.slice(0,S.txQ.limit);
+  if(!rows.length)return empty('Tidak ada transaksi yang cocok dengan filter.');
+  return `<p class="note" style="margin:0 0 8px">${nf(rows.length)} transaksi${rows.length>shown.length?`, menampilkan ${nf(shown.length)} terbaru`:''}.</p><div class="scroll"><table class="tbl"><thead><tr><th>Tanggal</th><th>Plant</th><th>Item</th><th class="num">Jumlah</th><th class="num">≈ kg</th><th>Pengangkut</th><th>Tujuan</th><th>Manifest / tiket</th><th>Metode</th><th></th></tr></thead><tbody>`+
+    shown.map(t=>{const it=IM[t.item]||{nama:t.item,satuan:'',aliran:'UM'};const kg=toKg(t);
+      return `<tr class="e-${ALIRAN[it.aliran].cls}"><td>${dLabel(t.tanggal)}${t.granularitas==='bulanan'?' <span class="tag">bulanan</span>':''}${t.jenisCatat!=='Angkut keluar'?` <span class="tag">${esc(t.jenisCatat)}</span>`:''}</td><td>${esc(PM[t.plant]?PM[t.plant].nama:t.plant)}</td><td>${esc(it.nama)}</td><td class="num">${qf(t.jumlah)} ${esc(it.satuan)}</td><td class="num">${kg==null?'<span class="warncell" title="Belum ada faktor konversi">?</span>':nf(kg)}</td><td>${esc(VM[t.vendor]?VM[t.vendor].nama:t.vendor)}${t.kendaraan?`<br><small>${esc(t.kendaraan)}</small>`:''}</td><td>${esc(TM[t.tujuan]?TM[t.tujuan].nama:t.tujuan)}</td><td>${t.noDok?esc(t.noDok):'<span class="dim">–</span>'}</td><td>${t.metode==='Belum dikonfirmasi'?'<span class="tag warn">belum jelas</span>':esc(t.metode)}</td><td style="white-space:nowrap"><button class="btn sm" data-act="edit" data-id="${esc(t.id)}">Ubah</button> <button class="btn sm danger" data-act="del" data-id="${esc(t.id)}" data-twice="1">Hapus</button></td></tr>`;}).join('')+
+    `</tbody></table></div>`+(rows.length>shown.length?`<div class="actions"><button class="btn" data-act="more">Tampilkan 100 lagi</button></div>`:'');
+}
+function renderTransaksi(){
+  const issues=runChecks(getTx()).filter(i=>i.rows.length);
+  return `<section class="panel"><h2>Transaksi</h2><p class="lede">Semua catatan pada filter di bagian atas. Satu baris satu transaksi; warna di tepi kiri menandai aliran limbah.</p>
+  <div class="toolbar"><input class="ctl" id="tx-q" type="search" placeholder="Cari item, vendor, nomor…" value="${esc(S.txQ.q)}" style="min-width:220px">
+  <select class="ctl" id="tx-aliran"><option value="">Semua aliran</option>${ALIRAN_ORDER.map(a=>`<option value="${a}"${S.txQ.aliran===a?' selected':''}>${ALIRAN[a].nama}</option>`).join('')}</select>
+  <select class="ctl" id="tx-issue"><option value="">Semua kondisi data</option>${issues.map(i=>`<option value="${i.id}"${S.txQ.issue===i.id?' selected':''}>${esc(i.judul)} (${i.rows.length})</option>`).join('')}</select>
+  <button class="btn primary" data-act="tab" data-tab="input">Catat baru</button></div>
+  <div id="tx-body">${txTable()}</div></section>`;
+}
+/* ================= Rekap per format ================= */
+const RK_FORMAT={s1:'Harian, jenis limbah sebagai kolom (gaya Sunter 1)',s2:'Bulanan, jenis limbah sebagai baris (gaya Sunter 2)',log:'Log pengangkutan (gaya Karawang)'};
+function renderRekap(){
+  const R=S.rk;
+  const months=[...new Set(getTx({plant:R.plant,from:'',to:''}).map(t=>t.tanggal.slice(0,7)))].sort();
+  if(months.length&&!months.includes(R.period)){const same=months.find(m=>m.slice(0,4)===R.period.slice(0,4));R.period=same||months[months.length-1];}
+  const years=[...new Set(months.map(m=>m.slice(0,4)))];
+  const perSel=R.format==='s2'
+    ?`<select class="ctl" id="rk-period">${years.map(y=>`<option value="${y}-01"${R.period.slice(0,4)===y?' selected':''}>${y}</option>`).join('')}</select>`
+    :`<select class="ctl" id="rk-period">${months.map(m=>`<option value="${m}"${R.period===m?' selected':''}>${ymLabel(m)}</option>`).join('')}</select>`;
+  let body;
+  if(!months.length)body=empty('Plant ini belum punya data.');
+  else body=R.format==='s1'?rekapS1(R.plant,R.period):R.format==='s2'?rekapS2(R.plant,R.period,R.mode):rekapLog(R.plant,R.period);
+  return `<section class="panel"><h2>Rekap per format</h2><p class="lede">Data di belakang seragam. Di sini kamu bisa melihatnya dalam tiga format yang sudah dipakai tiap plant, bahkan memakai format plant lain.</p>
+  <div class="toolbar"><select class="ctl" id="rk-format" style="min-width:300px">${Object.keys(RK_FORMAT).map(k=>`<option value="${k}"${R.format===k?' selected':''}>${RK_FORMAT[k]}</option>`).join('')}</select>
+  <select class="ctl" id="rk-plant">${[['ALL','Semua plant']].concat(DB.plants.map(p=>[p.id,p.nama])).map(o=>`<option value="${o[0]}"${R.plant===o[0]?' selected':''}>${esc(o[1])}</option>`).join('')}</select>
+  ${perSel}${R.format==='s2'?`<select class="ctl" id="rk-mode"><option value="qty"${R.mode==='qty'?' selected':''}>Tampilkan jumlah</option><option value="rp"${R.mode==='rp'?' selected':''}>Tampilkan rupiah</option></select>`:''}</div>
+  ${body}</section>`;
+}
+function rekapS1(plant,period){
+  const txs=getTx({plant,from:period,to:period}).filter(t=>t.jenisCatat==='Angkut keluar');
+  if(!txs.length)return empty('Tidak ada catatan angkut keluar pada periode ini.');
+  const y=+period.slice(0,4),m=+period.slice(5,7),nd=lastDay(y,m),end=period+'-'+pad(nd);
+  const vc={};txs.forEach(t=>{const o=vc[t.item]=vc[t.item]||{};o[t.vendor]=(o[t.vendor]||0)+1;});
+  const vOf={};Object.keys(vc).forEach(k=>{vOf[k]=Object.keys(vc[k]).sort((a,b)=>vc[k][b]-vc[k][a])[0];});
+  const codes=sortItems(Object.keys(vOf));
+  const vn=v=>VM[v]?VM[v].nama:v;
+  const vnames=[...new Set(codes.map(c=>vOf[c]))].sort((a,b)=>vn(a).localeCompare(vn(b)));
+  const groups=vnames.map(v=>({v,items:codes.filter(c=>vOf[c]===v)}));
+  const cols=groups.reduce((a,g)=>a.concat(g.items),[]);
+  const cell={},kond={},tot={};cols.forEach(c=>tot[c]=0);
+  txs.forEach(t=>{const d=+t.tanggal.slice(8);const k=d+'|'+t.item;cell[k]=(cell[k]||0)+t.jumlah;tot[t.item]+=t.jumlah;if(t.kondisi)(kond[d]=kond[d]||new Set()).add(t.kondisi);});
+  let h=`<div class="scroll"><table class="tbl matrix"><thead><tr><th rowspan="2" class="stick">Tgl</th>${groups.map(g=>`<th class="grp" colspan="${g.items.length}">${esc(vn(g.v))}</th>`).join('')}<th rowspan="2">Kondisi produksi</th></tr><tr>${cols.map(c=>`<th class="num">${esc(itemLabel(c,plant))}<small>${esc(IM[c].satuan)}</small></th>`).join('')}</tr></thead><tbody>`;
+  for(let d=1;d<=nd;d++){
+    h+=`<tr><td class="stick">${d}</td>${cols.map(c=>`<td class="num">${cell[d+'|'+c]!=null?qf(cell[d+'|'+c]):''}</td>`).join('')}<td>${kond[d]?esc([...kond[d]].join(', ')):''}</td></tr>`;
+  }
+  const price={},bill={};cols.forEach(c=>{const p=IM[c].aliran==='NB'?priceFor(c,end):null;price[c]=p;bill[c]=p==null?null:tot[c]*p;});
+  h+=`</tbody><tfoot><tr><td class="stick">Total</td>${cols.map(c=>`<td class="num">${qf(tot[c])}</td>`).join('')}<td></td></tr>`+
+     `<tr><td class="stick">Harga</td>${cols.map(c=>`<td class="num">${price[c]==null?'–':nf(price[c])}</td>`).join('')}<td></td></tr>`+
+     `<tr><td class="stick">Tagihan</td>${cols.map(c=>`<td class="num">${bill[c]==null?'–':nf(bill[c])}</td>`).join('')}<td></td></tr></tfoot></table></div>`;
+  const vb=groups.map(g=>({v:g.v,sum:g.items.reduce((s,c)=>s+(bill[c]||0),0),has:g.items.some(c=>bill[c]!=null)})).filter(x=>x.has);
+  if(vb.length)h+=`<h3 style="margin-top:16px">Tagihan per pengangkut</h3><table class="tbl" style="max-width:520px"><tbody>${vb.map(x=>`<tr><td>${esc(vn(x.v))}</td><td class="num"><b>${rpf(x.sum)}</b></td></tr>`).join('')}</tbody></table>`;
+  return h+`<p class="note">Kolom dikelompokkan menurut pengangkut. Harga dan tagihan hanya dihitung untuk item scrap yang punya harga di Master data, memakai harga yang berlaku di akhir bulan.</p>`;
+}
+function rekapS2(plant,period,mode){
+  const year=period.slice(0,4);
+  const txs=getTx({plant,from:year+'-01',to:year+'-12'}).filter(t=>t.jenisCatat==='Angkut keluar');
+  if(!txs.length)return empty('Tidak ada catatan angkut keluar pada tahun ini.');
+  const codes=sortItems([...new Set(txs.map(t=>t.item))]);
+  const q={},r={},span={};
+  txs.forEach(t=>{const mi=+t.tanggal.slice(5,7)-1;const k=t.item+'|'+mi;q[k]=(q[k]||0)+t.jumlah;const v=rpOf(t);if(v!=null)r[k]=(r[k]||0)+v;const s=span[t.item]=span[t.item]||{a:99,b:-1};s.a=Math.min(s.a,mi);s.b=Math.max(s.b,mi);});
+  const gap=(c,mi)=>span[c].a<mi&&mi<span[c].b&&q[c+'|'+mi]==null;
+  let h=`<div class="scroll"><table class="tbl"><thead><tr><th>Item</th><th>Satuan</th>${BLN.map(b=>`<th class="num">${b}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>`;
+  const colTot=new Array(12).fill(0);
+  codes.forEach(c=>{
+    const it=IM[c];let rowT=0,any=false;
+    let cells='';
+    for(let mi=0;mi<12;mi++){
+      const k=c+'|'+mi;let txt='';
+      if(mode==='qty'){if(q[k]!=null){txt=qf(q[k]);rowT+=q[k];any=true;if(it.faktor!=null)colTot[mi]+=q[k]*it.faktor;}}
+      else{if(r[k]!=null){txt=nf(r[k]);rowT+=r[k];any=true;colTot[mi]+=r[k];}else if(q[k]!=null)txt='<span class="dim">–</span>';}
+      if(!txt&&gap(c,mi))txt='<span class="warncell" title="Kosong atau nol? Belum dibedakan">?</span>';
+      cells+=`<td class="num">${txt}</td>`;
+    }
+    h+=`<tr class="e-${ALIRAN[it.aliran].cls}"><td>${esc(itemLabel(c,plant))}</td><td>${mode==='qty'?esc(it.satuan):'Rp'}</td>${cells}<td class="num"><b>${any?(mode==='qty'?qf(rowT):nf(rowT)):'–'}</b></td></tr>`;
+  });
+  const gt=colTot.reduce((a,b)=>a+b,0);
+  h+=`</tbody><tfoot><tr><td colspan="2">${mode==='qty'?'Total kg (item yang bisa dikonversi)':'Total rupiah'}</td>${colTot.map(v=>`<td class="num">${v?nf(v):''}</td>`).join('')}<td class="num">${nf(gt)}</td></tr></tfoot></table></div>`;
+  return h+`<p class="note">${mode==='qty'?'Total kolom hanya menjumlahkan item yang satuannya bisa dikonversi ke kg. Tanda ? berarti bulan itu kosong di antara bulan yang terisi.':'Rupiah dihitung dari jumlah kali harga yang berlaku pada tanggal transaksi. Item tanpa harga ditandai –.'}</p>`;
+}
+function rekapLog(plant,period){
+  const txs=getTx({plant,from:period,to:period}).filter(t=>t.jenisCatat==='Angkut keluar').sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||aliranRank(a.item)-aliranRank(b.item)||a.id.localeCompare(b.id));
+  if(!txs.length)return empty('Tidak ada catatan angkut keluar pada periode ini.');
+  let h=`<div class="scroll"><table class="tbl"><thead><tr><th>Tanggal</th><th>Pengangkutan</th><th class="num">Jumlah</th><th>Kendaraan</th><th>Pengangkut</th><th>Tujuan akhir</th><th>Paraf</th></tr></thead><tbody>`+
+    txs.map(t=>{const it=IM[t.item];return `<tr class="e-${ALIRAN[it.aliran].cls}"><td>${dLabel(t.tanggal)}</td><td>${esc(itemLabel(t.item,plant))}</td><td class="num">${qf(t.jumlah)} ${esc(it.satuan)}</td><td>${esc(t.kendaraan||'–')}</td><td>${esc(VM[t.vendor]?VM[t.vendor].nama:t.vendor)}</td><td>${esc(TM[t.tujuan]?TM[t.tujuan].nama:t.tujuan)}</td><td><span class="dim">belum ada</span></td></tr>`;}).join('')+`</tbody></table></div>`;
+  const sub={};txs.forEach(t=>sub[t.item]=(sub[t.item]||0)+t.jumlah);
+  h+=`<h3 style="margin-top:16px">Total per item</h3><table class="tbl" style="max-width:560px"><tbody>${sortItems(Object.keys(sub)).map(k=>`<tr class="e-${ALIRAN[IM[k].aliran].cls}"><td>${esc(itemLabel(k,plant))}</td><td class="num"><b>${qf(sub[k])} ${esc(IM[k].satuan)}</b></td></tr>`).join('')}</tbody></table>`;
+  return h+`<p class="note">Kolom paraf belum ada di prototipe; alur prepared, checked, dan approved perlu dibangun di versi produksi.</p>`;
+}
+
+/* ================= Master data ================= */
+function renderMaster(){
+  const itemSel=`<select class="ctl" id="%ID%">${DB.items.slice().sort((a,b)=>a.nama.localeCompare(b.nama)).map(i=>`<option value="${esc(i.kode)}">${esc(i.nama)}</option>`).join('')}</select>`;
+  const plantSel=id=>`<select class="ctl" id="${id}">${DB.plants.map(p=>`<option value="${esc(p.id)}">${esc(p.nama)}</option>`).join('')}</select>`;
+  const cellIn=(spec,val,cls)=>`<input class="cell ${cls||''}" data-edit="${esc(spec)}" value="${esc(val)}">`;
+  let h=`<section class="panel"><h2>Item dan alias</h2><p class="lede">Satu nama standar per jenis limbah. Alias menyambungkan nama di form tiap plant ke nama standar, dan faktor konversi membuat semua satuan bisa dijumlah dalam kg. Kosongkan faktor bila belum diketahui.</p>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Kode</th><th>Nama standar</th><th>Aliran</th><th>Satuan</th><th>Faktor ke kg</th><th>Status satuan</th><th>Alias per plant</th><th>Catatan</th></tr></thead><tbody>`;
+  DB.items.slice().sort((a,b)=>aliranRank(a.kode)-aliranRank(b.kode)||a.nama.localeCompare(b.nama)).forEach(i=>{
+    h+=`<tr class="e-${ALIRAN[i.aliran].cls}"><td>${esc(i.kode)}</td><td>${cellIn('item|'+i.kode+'|nama',i.nama)}</td><td><select class="cell" data-edit="item|${esc(i.kode)}|aliran">${ALIRAN_ORDER.map(a=>`<option value="${a}"${i.aliran===a?' selected':''}>${ALIRAN[a].short}</option>`).join('')}</select></td><td>${cellIn('item|'+i.kode+'|satuan',i.satuan)}</td><td>${cellIn('item|'+i.kode+'|faktor',i.faktor==null?'':i.faktor,'n')}</td><td><select class="cell" data-edit="item|${esc(i.kode)}|status"><option value="tertulis"${i.status==='tertulis'?' selected':''}>tertulis</option><option value="dugaan"${i.status==='dugaan'?' selected':''}>dugaan</option></select></td>
+    <td><div class="chips">${i.alias.map((a,ix)=>`<span class="chip ${a.ok?'ok':'q'}"><button data-act="alias-toggle" data-item="${esc(i.kode)}" data-ix="${ix}" title="${a.ok?'Terkonfirmasi. Klik untuk menandai belum pasti.':'Belum dikonfirmasi. Klik untuk menandai terkonfirmasi.'}">${esc(PM[a.plant]?PM[a.plant].nama:a.plant)}: ${esc(a.teks)} ${a.ok?'✓':'?'}</button><button data-act="alias-del" data-item="${esc(i.kode)}" data-ix="${ix}" data-twice="1" title="Hapus alias" aria-label="Hapus alias">×</button></span>`).join('')||'<span class="dim">–</span>'}</div></td><td>${cellIn('item|'+i.kode+'|catatan',i.catatan)}</td></tr>`;
+  });
+  h+=`</tbody></table></div>
+  <div class="grid2" style="margin-top:18px"><div><h3>Tambah item</h3><div class="formgrid" style="grid-template-columns:1fr 1fr">
+    <label class="field"><span class="l">Kode</span><input id="mi-kode" placeholder="NB-XXX"></label>
+    <label class="field"><span class="l">Nama standar</span><input id="mi-nama"></label>
+    <label class="field"><span class="l">Aliran</span><select id="mi-aliran">${ALIRAN_ORDER.map(a=>`<option value="${a}">${ALIRAN[a].nama}</option>`).join('')}</select></label>
+    <label class="field"><span class="l">Satuan</span><input id="mi-satuan" value="kg"></label>
+    <label class="field"><span class="l">Faktor ke kg</span><input id="mi-faktor" inputmode="decimal" placeholder="1"></label></div>
+    <div class="actions"><button class="btn primary" data-act="add-item">Tambah item</button></div></div>
+  <div><h3>Tambah alias</h3><div class="formgrid" style="grid-template-columns:1fr">
+    <label class="field"><span class="l">Item</span>${itemSel.replace('%ID%','ma-item')}</label>
+    <label class="field"><span class="l">Plant</span>${plantSel('ma-plant')}</label>
+    <label class="field"><span class="l">Nama di form plant</span><input id="ma-teks"></label></div>
+    <div class="actions"><button class="btn primary" data-act="add-alias">Tambah alias</button></div></div></div></section>`;
+
+  const hs=DB.harga.map((x,ix)=>({x,ix})).sort((a,b)=>a.x.item.localeCompare(b.x.item)||b.x.berlaku.localeCompare(a.x.berlaku));
+  h+=`<section class="panel"><h2>Harga scrap per periode</h2><p class="lede">Rupiah dihitung otomatis dari jumlah kali harga yang berlaku pada tanggal transaksi. Harga baru tidak mengubah nilai transaksi lama.</p>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Item</th><th class="num">Harga per satuan (Rp)</th><th>Berlaku sejak</th><th>Catatan</th><th></th></tr></thead><tbody>${hs.map(o=>`<tr><td>${esc(IM[o.x.item]?IM[o.x.item].nama:o.x.item)} <small>${esc(IM[o.x.item]?IM[o.x.item].satuan:'')}</small></td><td>${cellIn('harga|'+o.ix+'|harga',o.x.harga,'n')}</td><td><input class="cell" type="date" data-edit="harga|${o.ix}|berlaku" value="${esc(o.x.berlaku)}"></td><td>${cellIn('harga|'+o.ix+'|catatan',o.x.catatan)}</td><td><button class="btn sm danger" data-act="del-harga" data-ix="${o.ix}" data-twice="1">Hapus</button></td></tr>`).join('')}</tbody></table></div>
+  <div class="formgrid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-top:14px">
+    <label class="field"><span class="l">Item</span>${itemSel.replace('%ID%','mh-item')}</label>
+    <label class="field"><span class="l">Harga (Rp)</span><input id="mh-harga" inputmode="decimal"></label>
+    <label class="field"><span class="l">Berlaku sejak</span><input id="mh-berlaku" type="date"></label>
+    <label class="field"><span class="l">Catatan</span><input id="mh-cat"></label></div>
+  <div class="actions"><button class="btn primary" data-act="add-harga">Tambah harga</button></div></section>`;
+
+  h+=`<div class="grid2"><section class="panel"><h3>Plant dan area</h3><div class="scroll"><table class="tbl"><thead><tr><th>ID</th><th>Nama</th><th>Area / TPS (pisahkan dengan koma)</th></tr></thead><tbody>${DB.plants.map(p=>`<tr><td>${esc(p.id)}</td><td>${cellIn('plant|'+p.id+'|nama',p.nama)}</td><td>${cellIn('plant|'+p.id+'|areas',p.areas.join(', '))}</td></tr>`).join('')}</tbody></table></div>
+    <div class="formgrid" style="grid-template-columns:1fr 1fr;margin-top:12px"><label class="field"><span class="l">ID plant</span><input id="mp-id" placeholder="KRW3"></label><label class="field"><span class="l">Nama</span><input id="mp-nama"></label></div><div class="actions"><button class="btn" data-act="add-plant">Tambah plant</button></div></section>
+  <section class="panel"><h3>Pengangkut dan tujuan akhir</h3><div class="scroll"><table class="tbl"><thead><tr><th>Pengangkut</th><th>Tipe</th></tr></thead><tbody>${DB.vendors.filter(v=>v.id!=='NA').map(v=>`<tr><td>${cellIn('vendor|'+v.id+'|nama',v.nama)}</td><td>${cellIn('vendor|'+v.id+'|tipe',v.tipe)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="formgrid" style="grid-template-columns:1fr 1fr;margin:10px 0"><label class="field"><span class="l">Pengangkut baru</span><input id="mv-nama"></label><label class="field"><span class="l">Tipe</span><input id="mv-tipe"></label></div><div class="actions" style="margin-top:0"><button class="btn" data-act="add-vendor">Tambah pengangkut</button></div>
+    <div class="scroll" style="margin-top:16px"><table class="tbl"><thead><tr><th>Tujuan akhir</th><th>Tipe</th></tr></thead><tbody>${DB.tujuan.filter(v=>v.id!=='NA').map(v=>`<tr><td>${cellIn('tujuan|'+v.id+'|nama',v.nama)}</td><td>${cellIn('tujuan|'+v.id+'|tipe',v.tipe)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="formgrid" style="grid-template-columns:1fr 1fr;margin:10px 0"><label class="field"><span class="l">Tujuan baru</span><input id="mt-nama"></label><label class="field"><span class="l">Tipe</span><input id="mt-tipe"></label></div><div class="actions" style="margin-top:0"><button class="btn" data-act="add-tujuan">Tambah tujuan</button></div></section></div>`;
+  return h;
+}
+function applyEdit(spec,val){
+  const p=spec.split('|'),kind=p[0],id=p[1],field=p[2];
+  if(kind==='item'){const it=IM[id];if(!it)return;if(field==='faktor'){const n=parseNum(val);it.faktor=(val===''||isNaN(n))?null:n;}else it[field]=val;}
+  else if(kind==='vendor'&&VM[id])VM[id][field]=val;
+  else if(kind==='tujuan'&&TM[id])TM[id][field]=val;
+  else if(kind==='plant'&&PM[id]){if(field==='areas')PM[id].areas=val.split(',').map(s=>s.trim()).filter(Boolean);else PM[id][field]=val;}
+  else if(kind==='harga'){const h=DB.harga[+id];if(!h)return;if(field==='harga'){const n=parseNum(val);h.harga=isNaN(n)?0:n;}else h[field]=val;}
+  persist();renderNav();renderTop();toast('Perubahan tersimpan');
+}
+
+/* ================= Validasi ================= */
+function renderValidasi(){
+  const issues=runChecks(getTx());
+  const lab={kritis:'Kritis',sedang:'Perlu perhatian',info:'Catatan'};
+  let h=`<section class="panel"><h2>Validasi data</h2><p class="lede">Pemeriksaan otomatis atas catatan pada filter di bagian atas. Temuan kritis sebaiknya diperbaiki sebelum data dipakai untuk laporan.</p>${issues.length?'':'<div class="msg good">Tidak ada temuan pada filter ini.</div>'}</section>`;
+  return h+issues.map(i=>`<div class="issue ${i.sev}"><h3>${esc(i.judul)} <span class="tag ${i.sev==='kritis'?'bad':i.sev==='sedang'?'warn':''}">${lab[i.sev]}</span>${i.rows.length?` <small>${nf(i.rows.length)} catatan</small>`:''}</h3><p>${esc(i.detail)}</p><p><b>Saran:</b> ${esc(i.saran)}</p>${i.notes.length?`<ul>${i.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}${i.rows.length?`<button class="btn sm" data-act="issue-view" data-id="${esc(i.id)}">Lihat catatan</button>`:''}</div>`).join('');
+}
+
+/* ================= Impor & ekspor ================= */
+const TPL_HDR=['Tanggal','Plant','Area','Jenis catatan','Item','Jumlah','Metode ukur','Kendaraan','Pengangkut','Tujuan akhir','No. manifest / tiket','Kondisi produksi','Catatan'];
+const HK={tanggal:['tanggal','tgl','date'],plant:['plant'],area:['area','areatps','tps'],jenis:['jeniscatatan','jenis'],item:['item','namaitem','jenislimbah','limbah'],jumlah:['jumlah','qty','berat','volume'],metode:['metodeukur','metode'],kend:['kendaraan'],vendor:['pengangkut','vendor'],tujuan:['tujuanakhir','tujuan'],dok:['nomanifesttiket','nomanifest','notiket','nodokumen','nodok'],kondisi:['kondisiproduksi','kondisi'],catatan:['catatan','keterangan']};
+function today(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function txExportRows(){
+  return DB.tx.slice().sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.id.localeCompare(b.id)).map(t=>{const it=IM[t.item]||{};return {ID:t.id,Tanggal:t.tanggal,Granularitas:t.granularitas,Plant:PM[t.plant]?PM[t.plant].nama:t.plant,Area:t.area,'Jenis catatan':t.jenisCatat,'Kode item':t.item,'Item (nama standar)':it.nama||'',Aliran:it.aliran?ALIRAN[it.aliran].nama:'',Jumlah:t.jumlah,Satuan:it.satuan||'','≈ kg':toKg(t),'Nilai (Rp)':rpOf(t),'Metode ukur':t.metode,Kendaraan:t.kendaraan,Pengangkut:VM[t.vendor]?VM[t.vendor].nama:t.vendor,'Tujuan akhir':TM[t.tujuan]?TM[t.tujuan].nama:t.tujuan,'No. manifest / tiket':t.noDok,'Kondisi produksi':t.kondisi,Catatan:t.catatan};});
+}
+let _dl=null;
+async function getDl(){if(_dl)return _dl;_dl=(async()=>{try{return window.claude&&window.claude.use?await window.claude.use('downloads'):null;}catch(e){return null;}})();return _dl;}
+async function saveFile(name,data){
+  const dl=await getDl();
+  if(!dl){toast('Unduhan hanya tersedia saat halaman dibuka lewat claude.ai.');return;}
+  try{await dl.save({filename:name,data});toast('File siap disimpan');}catch(e){if(e&&e.code==='declined')return;toast('File gagal disimpan'+(e&&e.message?': '+e.message:''));}
+}
+function exportXlsx(){
+  if(typeof XLSX==='undefined'){toast('Pustaka Excel belum termuat. Coba unduh CSV.');return;}
+  const wb=XLSX.utils.book_new();
+  const add=(n,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),n);
+  add('Transaksi',txExportRows());
+  add('Item',DB.items.map(i=>({Kode:i.kode,'Nama standar':i.nama,Aliran:ALIRAN[i.aliran].nama,Satuan:i.satuan,'Faktor ke kg':i.faktor,'Status satuan':i.status,Catatan:i.catatan})));
+  add('Alias',DB.items.reduce((a,i)=>a.concat(i.alias.map(x=>({Kode:i.kode,'Nama standar':i.nama,Plant:PM[x.plant]?PM[x.plant].nama:x.plant,'Nama di form plant':x.teks,Terkonfirmasi:x.ok?'ya':'belum'}))),[]));
+  add('Harga',DB.harga.map(h=>({Kode:h.item,Item:IM[h.item]?IM[h.item].nama:h.item,'Harga (Rp)':h.harga,'Berlaku sejak':h.berlaku,Catatan:h.catatan})));
+  add('Pengangkut',DB.vendors.map(v=>({ID:v.id,Nama:v.nama,Tipe:v.tipe})));
+  add('Tujuan akhir',DB.tujuan.map(v=>({ID:v.id,Nama:v.nama,Tipe:v.tipe})));
+  add('Plant',DB.plants.map(p=>({ID:p.id,Nama:p.nama,Area:p.areas.join(', ')})));
+  saveFile('inventori-limbah-tmmin-'+today()+'.xlsx',XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+}
+function exportCsv(){
+  const rows=txExportRows();if(!rows.length){toast('Belum ada transaksi.');return;}
+  const hdr=Object.keys(rows[0]);const q=v=>{v=v==null?'':String(v);return /[",;\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  saveFile('transaksi-limbah-tmmin-'+today()+'.csv','\ufeff'+[hdr.join(',')].concat(rows.map(r=>hdr.map(h=>q(r[h])).join(','))).join('\r\n'));
+}
+function templateXlsx(){
+  if(typeof XLSX==='undefined'){toast('Pustaka Excel belum termuat.');return;}
+  const wb=XLSX.utils.book_new();
+  const ex={};TPL_HDR.forEach(h=>ex[h]='');
+  Object.assign(ex,{Tanggal:'2026-06-30',Plant:'Karawang 1 & 2',Area:'Seluruh area','Jenis catatan':'Angkut keluar',Item:'Residu (sampah lainnya)',Jumlah:3102,'Metode ukur':'Timbang',Kendaraan:'Truk',Pengangkut:'PT Herma Muda','Tujuan akhir':'TPA Jalupang','No. manifest / tiket':'','Kondisi produksi':'',Catatan:''});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([ex],{header:TPL_HDR}),'Template');
+  const n=Math.max(DB.plants.length,DB.items.length,DB.vendors.length,DB.tujuan.length,JENIS.length,METODE.length);
+  const guide=[];for(let i=0;i<n;i++)guide.push({Plant:DB.plants[i]?DB.plants[i].nama:'','Jenis catatan':JENIS[i]||'','Metode ukur':METODE[i]||'',Pengangkut:DB.vendors[i]?DB.vendors[i].nama:'','Tujuan akhir':DB.tujuan[i]?DB.tujuan[i].nama:'','Item (nama standar atau alias)':DB.items[i]?DB.items[i].nama:''});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(guide),'Pilihan yang dikenal');
+  saveFile('template-impor-limbah.xlsx',XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+}
+function csvToObjects(text){
+  text=text.replace(/^\ufeff/,'');
+  const first=text.split(/\r?\n/)[0]||'';const delim=first.split(';').length>first.split(',').length?';':',';
+  const rows=[];let row=[],cur='',qt=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(qt){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else qt=false;}else cur+=ch;}
+    else if(ch==='"')qt=true;
+    else if(ch===delim){row.push(cur);cur='';}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);cur='';if(row.some(c=>c!==''))rows.push(row);row=[];}
+    else cur+=ch;}
+  row.push(cur);if(row.some(c=>c!==''))rows.push(row);
+  const hdr=rows.shift()||[];
+  return rows.map(r=>{const o={};hdr.forEach((h,i)=>o[h]=r[i]!=null?r[i]:'');return o;});
+}
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate());
+  if(typeof v==='number'){const d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
+  const s=String(v==null?'':v).trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  let y,mo,d;
+  if(m){y=+m[1];mo=+m[2];d=+m[3];}
+  else{m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);if(!m)return null;d=+m[1];mo=+m[2];y=+m[3];}
+  if(mo<1||mo>12||d<1||d>lastDay(y,mo))return null;
+  return y+'-'+pad(mo)+'-'+pad(d);
+}
+function parseNum(v){
+  if(typeof v==='number')return v;
+  let s=String(v==null?'':v).trim().replace(/\s/g,'');if(s==='')return NaN;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,'').replace(',','.');
+  else if(s.includes(',')&&!s.includes('.'))s=s.replace(',','.');
+  return /^-?\d+(\.\d+)?$/.test(s)?parseFloat(s):NaN;
+}
+function importRows(objs,fileName){
+  const ok=[],bad=[],warn=new Set();
+  const pick=(row,key)=>{const ks=Object.keys(row);for(const k of ks){if(HK[key].includes(norm(k)))return row[k];}return '';};
+  const byName=(list,v)=>{const n=norm(v);if(!n)return null;return list.find(x=>norm(x.id)===n||norm(x.nama)===n)||list.find(x=>norm(x.nama).includes(n)||n.includes(norm(x.nama)))||null;};
+  objs.forEach((row,idx)=>{
+    const rn=idx+2;
+    const tgl=parseDate(pick(row,'tanggal'));if(!tgl){bad.push({rn,why:'Tanggal tidak terbaca'});return;}
+    const pl=byName(DB.plants,pick(row,'plant'));if(!pl){bad.push({rn,why:'Plant “'+pick(row,'plant')+'” tidak dikenal'});return;}
+    const itxt=String(pick(row,'item')).trim();const ni=norm(itxt);let item=null;
+    if(ni){item=DB.items.find(i=>norm(i.kode)===ni||norm(i.nama)===ni);
+      if(!item)item=DB.items.find(i=>i.alias.some(a=>a.plant===pl.id&&norm(a.teks)===ni))||DB.items.find(i=>i.alias.some(a=>norm(a.teks)===ni));}
+    if(!item){bad.push({rn,why:'Item “'+itxt+'” tidak ada di nama standar maupun alias'});return;}
+    const q=parseNum(pick(row,'jumlah'));if(Number.isNaN(q)||q<0){bad.push({rn,why:'Jumlah kosong atau bukan angka'});return;}
+    const jn=norm(pick(row,'jenis'));const jenis=JENIS.find(j=>norm(j)===jn)||'Angkut keluar';
+    const mn=norm(pick(row,'metode'));const metode=METODE.find(m=>norm(m)===mn)||'Belum dikonfirmasi';
+    const vtxt=pick(row,'vendor'),ttxt=pick(row,'tujuan');
+    const v=byName(DB.vendors,vtxt),tj=byName(DB.tujuan,ttxt);
+    if(String(vtxt).trim()&&!v)warn.add('Pengangkut “'+vtxt+'” tidak dikenal, dicatat sebagai tidak tercatat');
+    if(String(ttxt).trim()&&!tj)warn.add('Tujuan “'+ttxt+'” tidak dikenal, dicatat sebagai tidak tercatat');
+    ok.push({tanggal:tgl,plant:pl.id,area:String(pick(row,'area')||'').trim(),item:item.kode,jumlah:q,jenisCatat:jenis,metode,kendaraan:String(pick(row,'kend')||'').trim(),vendor:v?v.id:'NA',tujuan:tj?tj.id:'NA',noDok:String(pick(row,'dok')||'').trim(),kondisi:String(pick(row,'kondisi')||'').trim(),catatan:String(pick(row,'catatan')||'').trim(),granularitas:'harian'});
+  });
+  return {fileName,total:objs.length,ok,bad,warn:[...warn]};
+}
+async function handleFile(file){
+  try{
+    let objs;
+    if(/\.csv$/i.test(file.name))objs=csvToObjects(await file.text());
+    else{
+      if(typeof XLSX==='undefined'){toast('Pustaka Excel belum termuat. Simpan file sebagai CSV lalu impor.');return;}
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+      objs=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
+    }
+    S.imp=importRows(objs,file.name);render();
+  }catch(e){toast('File tidak bisa dibaca: '+(e&&e.message?e.message:e));}
+}
+function renderData(){
+  const im=S.imp;let prev='';
+  if(im){
+    prev=`<div class="msg ${im.ok.length?'good':'err'}" style="margin-top:14px"><b>${esc(im.fileName)}</b>: ${nf(im.total)} baris dibaca, ${nf(im.ok.length)} siap ditambahkan, ${nf(im.bad.length)} ditolak.</div>`+
+      (im.warn.length?`<div class="msg wrn" style="margin-top:8px">${im.warn.map(esc).join('<br>')}</div>`:'')+
+      (im.bad.length?`<div style="margin-top:8px"><b>Baris ditolak</b><ul class="note">${im.bad.slice(0,10).map(b=>`<li>Baris ${b.rn}: ${esc(b.why)}</li>`).join('')}${im.bad.length>10?`<li>dan ${im.bad.length-10} lainnya</li>`:''}</ul></div>`:'')+
+      `<div class="actions">${im.ok.length?`<button class="btn primary" data-act="import-commit">Tambahkan ${nf(im.ok.length)} transaksi</button>`:''}<button class="btn" data-act="import-cancel">Batalkan</button></div>`;
+  }
+  return `<section class="panel"><h2>Ekspor</h2><p class="lede">Unduh seluruh data, lengkap dengan kamus item, alias, harga, pengangkut, dan tujuan, untuk dipakai di Excel atau diserahkan ke tim IT.</p>
+    <div class="actions" style="margin-top:0"><button class="btn primary" data-act="export-xlsx">Unduh Excel (semua data)</button><button class="btn" data-act="export-csv">Unduh CSV transaksi</button></div></section>
+  <section class="panel"><h2>Impor</h2><p class="lede">Masukkan catatan dari Excel atau CSV, misalnya log Karawang bulan lain. Kolom Item boleh berisi nama standar atau nama sesuai form plant; alias dari Master data dipakai untuk memetakannya. Baris yang gagal dipetakan ditolak dan dilaporkan, tidak ditebak.</p>
+    <div class="actions" style="margin-top:0"><button class="btn" data-act="tpl">Unduh template impor</button><label class="btn" style="display:inline-block;position:relative;overflow:hidden">Pilih file<input id="imp-file" type="file" accept=".xlsx,.xls,.csv" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>${prev}</section>
+  <section class="panel"><h2>Tentang prototipe ini</h2><dl class="kv">
+    <dt>Data contoh</dt><dd>Sunter 1 Juni 2025 (item utama), Sunter 2 Jan–Mei 2026, Karawang 1 &amp; 2 Mei–Juni 2026. Karawang 3 belum ada.</dd>
+    <dt>Penyimpanan</dt><dd>Di browser ini saja. Orang lain tidak melihat data yang kamu ubah.</dd>
+    <dt>Belum ada</dt><dd>Login per pengguna, alur prepared / checked / approved, jejak audit, dan lampiran foto atau dokumen manifest.</dd>
+    <dt>Faktor konversi</dt><dd>Sengaja dikosongkan untuk m³, jumbo bag, dan satuan lain yang belum diketahui. Isi di Master data setelah dikonfirmasi.</dd></dl>
+    <div class="actions"><button class="btn danger" data-act="reset-seed" data-twice="1">Kembalikan ke data contoh</button><button class="btn danger" data-act="clear-all" data-twice="1">Hapus semua transaksi</button></div></section>`;
+}
+
+/* ================= Aksi & event ================= */
+const ACTS={
+  tab:b=>{S.tab=b.dataset.tab;render();window.scrollTo(0,0);},
+  save:()=>saveForm(),
+  'reset-form':()=>{S.form=blankForm({plant:S.form.plant});render();},
+  'cancel-edit':()=>{S.editId=null;S.form=blankForm();render();},
+  edit:b=>{const t=DB.tx.find(x=>x.id===b.dataset.id);if(!t)return;S.editId=t.id;S.form=blankForm({tanggal:t.tanggal,plant:t.plant,area:t.area,jenisCatat:t.jenisCatat,item:t.item,jumlah:String(t.jumlah),metode:t.metode,kendaraan:t.kendaraan,vendor:t.vendor,tujuan:t.tujuan,noDok:t.noDok,kondisi:t.kondisi,catatan:t.catatan});S.tab='input';render();window.scrollTo(0,0);},
+  del:b=>{DB.tx=DB.tx.filter(t=>t.id!==b.dataset.id);persist();toast('Transaksi dihapus');render();},
+  more:()=>{S.txQ.limit+=100;el('tx-body').innerHTML=txTable();},
+  'issue-view':b=>{S.txQ={q:'',aliran:'',issue:b.dataset.id,limit:100};S.tab='transaksi';render();window.scrollTo(0,0);},
+  'alias-toggle':b=>{const it=IM[b.dataset.item];if(!it)return;const a=it.alias[+b.dataset.ix];if(a)a.ok=!a.ok;persist();render();},
+  'alias-del':b=>{const it=IM[b.dataset.item];if(!it)return;it.alias.splice(+b.dataset.ix,1);persist();render();},
+  'add-item':()=>{
+    const kode=el('mi-kode').value.trim().toUpperCase(),nama=el('mi-nama').value.trim();
+    if(!kode||!nama){toast('Isi kode dan nama standar.');return;}
+    if(IM[kode]){toast('Kode '+kode+' sudah dipakai.');return;}
+    const fk=parseNum(el('mi-faktor').value);
+    DB.items.push({kode,nama,aliran:el('mi-aliran').value,satuan:el('mi-satuan').value.trim()||'kg',faktor:isNaN(fk)?null:fk,status:'dugaan',alias:[],catatan:''});
+    reindex();persist();toast('Item ditambahkan');render();},
+  'add-alias':()=>{
+    const it=IM[el('ma-item').value],pl=el('ma-plant').value,tx=el('ma-teks').value.trim();
+    if(!it||!tx){toast('Isi nama di form plant.');return;}
+    it.alias.push({plant:pl,teks:tx,ok:false});persist();toast('Alias ditambahkan, ditandai belum dikonfirmasi');render();},
+  'add-harga':()=>{
+    const n=parseNum(el('mh-harga').value),d=el('mh-berlaku').value;
+    if(isNaN(n)||!d){toast('Isi harga dan tanggal berlaku.');return;}
+    DB.harga.push({item:el('mh-item').value,harga:n,berlaku:d,catatan:el('mh-cat').value.trim()});persist();toast('Harga ditambahkan');render();},
+  'del-harga':b=>{DB.harga.splice(+b.dataset.ix,1);persist();render();},
+  'add-plant':()=>{
+    const id=el('mp-id').value.trim().toUpperCase(),nama=el('mp-nama').value.trim();
+    if(!id||!nama){toast('Isi ID dan nama plant.');return;}
+    if(PM[id]){toast('ID plant sudah dipakai.');return;}
+    DB.plants.push({id,nama,areas:[]});reindex();persist();toast('Plant ditambahkan');render();},
+  'add-vendor':()=>{
+    const nama=el('mv-nama').value.trim();if(!nama){toast('Isi nama pengangkut.');return;}
+    let id='V'+(DB.vendors.length+1);while(VM[id])id+='x';
+    DB.vendors.push({id,nama,tipe:el('mv-tipe').value.trim()});reindex();persist();toast('Pengangkut ditambahkan');render();},
+  'add-tujuan':()=>{
+    const nama=el('mt-nama').value.trim();if(!nama){toast('Isi nama tujuan.');return;}
+    let id='D'+(DB.tujuan.length+1);while(TM[id])id+='x';
+    DB.tujuan.push({id,nama,tipe:el('mt-tipe').value.trim()});reindex();persist();toast('Tujuan ditambahkan');render();},
+  'export-xlsx':()=>exportXlsx(),
+  'export-csv':()=>exportCsv(),
+  tpl:()=>templateXlsx(),
+  'import-commit':()=>{const im=S.imp;if(!im)return;im.ok.forEach(r=>{r.id=nextId();DB.tx.push(r);});persist();toast(nf(im.ok.length)+' transaksi ditambahkan');S.imp=null;render();},
+  'import-cancel':()=>{S.imp=null;render();},
+  'reset-seed':()=>{DB=seed();reindex();S.form=null;S.editId=null;S.imp=null;persist();toast('Data contoh dikembalikan');render();},
+  'clear-all':()=>{DB.tx=[];persist();toast('Semua transaksi dihapus');render();}
+};
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  if(b.dataset.twice&&!b.dataset.armed){b.dataset.armed='1';const old=b.textContent;b.textContent='Klik lagi untuk konfirmasi';setTimeout(()=>{if(b.isConnected){b.textContent=old;delete b.dataset.armed;}},3200);return;}
+  const f=ACTS[b.dataset.act];if(f)f(b,e);
+});
+function formEvent(t){
+  if(!t.dataset||!t.dataset.f||!S.form)return false;
+  S.form[t.dataset.f]=t.value;
+  if(t.dataset.f==='plant'){S.form.area='';const a=el('f-area');if(a)a.innerHTML=areaOptions(S.form);}
+  updateFormUI();return true;
+}
+document.addEventListener('input',e=>{
+  const t=e.target;if(formEvent(t))return;
+  if(t.id==='tx-q'){S.txQ.q=t.value;S.txQ.limit=100;el('tx-body').innerHTML=txTable();}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;if(formEvent(t))return;
+  if(t.id==='g-plant'||t.id==='g-from'||t.id==='g-to'){F[t.id.slice(2)]=t.value;S.txQ.limit=100;S.txQ.issue='';render();return;}
+  if(t.id==='tx-aliran'){S.txQ.aliran=t.value;el('tx-body').innerHTML=txTable();return;}
+  if(t.id==='tx-issue'){S.txQ.issue=t.value;el('tx-body').innerHTML=txTable();return;}
+  if(t.id==='rk-format'){S.rk.format=t.value;render();return;}
+  if(t.id==='rk-plant'){S.rk.plant=t.value;render();return;}
+  if(t.id==='rk-period'){S.rk.period=t.value;render();return;}
+  if(t.id==='rk-mode'){S.rk.mode=t.value;render();return;}
+  if(t.dataset&&t.dataset.edit){applyEdit(t.dataset.edit,t.value);return;}
+  if(t.id==='imp-file'&&t.files&&t.files[0]){handleFile(t.files[0]);t.value='';}
+});
+
+/* ================= Mulai ================= */
+DB=load();reindex();
+S.rk.plant=DB.plants.find(p=>p.id==='SUN1')?'SUN1':'ALL';
+render();
+</script>
+</body></html>
